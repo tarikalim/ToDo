@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Todo App</title>
+</head>
+<body>
+    <div>
+        <form action="/add" method="post">
+            <input type="text" name="title" />
+            <input type="submit" value="Add" />
+        </form>
+    </div>
+    <div>
+        <ul>
+        {% for todo in todo_list %}
+            <li>
+                <span style="{% if todo.complete %}text-decoration: line-through;{% endif %}">{{ todo.title }}</span>
+                <a href="/update/{{ todo.id }}">Complete</a>
+                <a href="/delete/{{ todo.id }}">Delete</a>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
