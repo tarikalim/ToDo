@@ -1,46 +1,48 @@
-from flask import Flask, request, render_template, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template
+from flask_login import LoginManager
+from flask_sqlalchemy import cli
+
+from controller import UserController, TodoController
+from models import db, User
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todos.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+app.config['SECRET_KEY'] = 'your_secret_key_here'  # Flask-Login için gerekli olan gizli anahtar
 
-class Todo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    complete = db.Column(db.Boolean, default=False)
+db.init_app(app)
+
+# Flask-Login yapılandırması
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # Giriş yapılması gereken sayfanın adı (örneğin, login.html)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Kullanıcı İşlemleri
+app.route('/register', methods=['GET', 'POST'])(UserController.register)
+app.route('/login', methods=['GET', 'POST'])(UserController.login)
+app.route('/logout')(UserController.logout)
+
+# Todo İşlemleri
+app.route('/todos', methods=['GET'])(TodoController.list_todos)
+app.route('/todos/add', methods=['GET', 'POST'])(TodoController.add_todo)
+app.route('/todos/<int:todo_id>/update', methods=['POST'])(TodoController.update_todo)
+app.route('/todos/<int:todo_id>/delete', methods=['POST'])(TodoController.delete_todo)
 
 @app.route('/')
 def index():
-    todo_list = Todo.query.all()
-    return render_template('index.html', todo_list=todo_list)
+    return render_template('login.html')
 
-@app.route('/add', methods=['POST'])
-def add():
-    title = request.form.get('title')
-    new_todo = Todo(title=title)
+@app.cli.command("create_db")
+def create_db():
     db.create_all()
-    db.session.add(new_todo)
-    db.session.commit()
-    return redirect(url_for('index'))
 
-@app.route('/update/<int:todo_id>')
-def update(todo_id):
-    todo = Todo.query.filter_by(id=todo_id).first()
-    todo.complete = not todo.complete
-    db.session.commit()
-    return redirect(url_for('index'))
-
-@app.route('/delete/<int:todo_id>')
-def delete(todo_id):
-    todo = Todo.query.filter_by(id=todo_id).first()
-    db.session.delete(todo)
-    db.session.commit()
-    return redirect(url_for('index'))
+@app.cli.command("drop_db")
+def drop_db():
+    db.drop_all()
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
-
