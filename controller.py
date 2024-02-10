@@ -12,6 +12,28 @@ def create_user():
     db.session.commit()
     return jsonify({"message": "User created successfully"}), 201
 
+# Route to login
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    user = User.query.filter_by(username=data['username']).first()
+    if user and user.check_password(data['password']):
+        return jsonify({"message": "Login successful", "user_id": user.id}), 200
+    else:
+        return jsonify({"message": "Invalid username or password"}), 401
+
+
+# Route to register
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    new_user = User(username=data['username'])
+    new_user.set_password(data['password'])
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"message": "User registered successfully"}), 201
+
 
 # Route to get a specific user
 @app.route('/user/<int:user_id>', methods=['GET'])
